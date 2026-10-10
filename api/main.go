@@ -8,9 +8,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
+	"github.com/raiyan/weather-station/api/database"
 	_ "github.com/raiyan/weather-station/api/docs" // Import swagger docs
 	"github.com/raiyan/weather-station/api/handlers"
-	"github.com/raiyan/weather-station/api/database"
 )
 
 // @title Weather Station API
@@ -47,8 +47,8 @@ func main() {
 	// Serve the OpenAPI JSON file
 	app.Static("/swagger.json", "./docs/swagger.json")
 
-	// Serve Stoplight Elements UI on the home page
-	app.Get("/", func(c *fiber.Ctx) error {
+	// Serve Stoplight Elements UI
+	app.Get("/docs", func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(`<!doctype html>
 <html lang="en">
@@ -74,10 +74,6 @@ func main() {
     />
   </body>
 </html>`)
-	})
-
-	app.Get("/docs", func(c *fiber.Ctx) error {
-		return c.Redirect("/")
 	})
 
 	// API Group
