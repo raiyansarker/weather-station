@@ -8,6 +8,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/recover"
 
+	"github.com/joho/godotenv"
 	"github.com/raiyan/weather-station/api/database"
 	_ "github.com/raiyan/weather-station/api/docs" // Import swagger docs
 	"github.com/raiyan/weather-station/api/handlers"
@@ -21,6 +22,10 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Println("No .env file found, relying on system environment variables")
+	}
+
 	// Initialize database connection
 	database.ConnectDB()
 
