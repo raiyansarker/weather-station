@@ -1,0 +1,172 @@
+definitions:
+  models.ErrorResponse:
+    properties:
+      code:
+        example: 400
+        type: integer
+      error:
+        example: Invalid request
+        type: string
+    type: object
+  models.TelemetryRequest:
+    properties:
+      light_level:
+        example: 3500
+        type: integer
+      pressure_hpa:
+        example: 1012.5
+        type: number
+      recorded_at:
+        example: "2026-10-10T10:00:00Z"
+        type: string
+      relative_humidity_pct:
+        example: 60
+        type: number
+      temperature_c:
+        example: 25.5
+        type: number
+    type: object
+  models.WeatherReading:
+    properties:
+      device_id:
+        example: esp32-station-01
+        type: string
+      id:
+        example: 123e4567-e89b-12d3-a456-426614174000
+        type: string
+      light_level:
+        example: 3500
+        type: integer
+      pressure_hpa:
+        example: 1012.5
+        type: number
+      recorded_at:
+        example: "2026-10-10T10:00:00Z"
+        type: string
+      relative_humidity_pct:
+        example: 60
+        type: number
+      temperature_c:
+        example: 25.5
+        type: number
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: API for ESP32 Weather Station telemetry and retrieval.
+  title: Weather Station API
+  version: "1.0"
+paths:
+  /api/v1/telemetry:
+    post:
+      consumes:
+      - application/json
+      description: Upload a single weather reading from an authorized ESP32
+      parameters:
+      - description: Weather reading data
+        in: body
+        name: reading
+        required: true
+        schema:
+          $ref: '#/definitions/models.TelemetryRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Reading accepted
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "401":
+          description: Missing or invalid credentials
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "413":
+          description: Payload too large
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "422":
+          description: Invalid sensor data
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      security:
+      - ApiKeyAuth: []
+      summary: Upload weather readings
+      tags:
+      - telemetry
+  /api/v1/weather/history:
+    get:
+      description: Retrieve historical readings using a time range
+      parameters:
+      - description: Inclusive start timestamp (RFC3339)
+        in: query
+        name: from
+        required: true
+        type: string
+      - description: Exclusive end timestamp (RFC3339)
+        in: query
+        name: to
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Historical readings
+          schema:
+            items:
+              $ref: '#/definitions/models.WeatherReading'
+            type: array
+        "400":
+          description: Invalid query parameters
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get historical weather
+      tags:
+      - weather
+  /api/v1/weather/live:
+    get:
+      description: Retrieve the latest weather reading
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Latest reading
+          schema:
+            $ref: '#/definitions/models.WeatherReading'
+        "404":
+          description: No live reading exists
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+        "500":
+          description: Server error
+          schema:
+            $ref: '#/definitions/models.ErrorResponse'
+      summary: Get live weather
+      tags:
+      - weather
+  /health:
+    get:
+      description: Check the health status of the API
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: API is healthy
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Health check
+      tags:
+      - health
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

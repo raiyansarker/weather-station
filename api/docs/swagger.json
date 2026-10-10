@@ -1,0 +1,256 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API for ESP32 Weather Station telemetry and retrieval.",
+        "title": "Weather Station API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8000",
+    "paths": {
+        "/api/v1/telemetry": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Upload a single weather reading from an authorized ESP32",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "telemetry"
+                ],
+                "summary": "Upload weather readings",
+                "parameters": [
+                    {
+                        "description": "Weather reading data",
+                        "name": "reading",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.TelemetryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Reading accepted",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Missing or invalid credentials",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "413": {
+                        "description": "Payload too large",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Invalid sensor data",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/weather/history": {
+            "get": {
+                "description": "Retrieve historical readings using a time range",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "weather"
+                ],
+                "summary": "Get historical weather",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Inclusive start timestamp (RFC3339)",
+                        "name": "from",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Exclusive end timestamp (RFC3339)",
+                        "name": "to",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Historical readings",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/models.WeatherReading"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid query parameters",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/weather/live": {
+            "get": {
+                "description": "Retrieve the latest weather reading",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "weather"
+                ],
+                "summary": "Get live weather",
+                "responses": {
+                    "200": {
+                        "description": "Latest reading",
+                        "schema": {
+                            "$ref": "#/definitions/models.WeatherReading"
+                        }
+                    },
+                    "404": {
+                        "description": "No live reading exists",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Server error",
+                        "schema": {
+                            "$ref": "#/definitions/models.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/health": {
+            "get": {
+                "description": "Check the health status of the API",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Health check",
+                "responses": {
+                    "200": {
+                        "description": "API is healthy",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "models.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "code": {
+                    "type": "integer",
+                    "example": 400
+                },
+                "error": {
+                    "type": "string",
+                    "example": "Invalid request"
+                }
+            }
+        },
+        "models.TelemetryRequest": {
+            "type": "object",
+            "properties": {
+                "light_level": {
+                    "type": "integer",
+                    "example": 3500
+                },
+                "pressure_hpa": {
+                    "type": "number",
+                    "example": 1012.5
+                },
+                "recorded_at": {
+                    "type": "string",
+                    "example": "2026-10-10T10:00:00Z"
+                },
+                "relative_humidity_pct": {
+                    "type": "number",
+                    "example": 60
+                },
+                "temperature_c": {
+                    "type": "number",
+                    "example": 25.5
+                }
+            }
+        },
+        "models.WeatherReading": {
+            "type": "object",
+            "properties": {
+                "device_id": {
+                    "type": "string",
+                    "example": "esp32-station-01"
+                },
+                "id": {
+                    "type": "string",
+                    "example": "123e4567-e89b-12d3-a456-426614174000"
+                },
+                "light_level": {
+                    "type": "integer",
+                    "example": 3500
+                },
+                "pressure_hpa": {
+                    "type": "number",
+                    "example": 1012.5
+                },
+                "recorded_at": {
+                    "type": "string",
+                    "example": "2026-10-10T10:00:00Z"
+                },
+                "relative_humidity_pct": {
+                    "type": "number",
+                    "example": 60
+                },
+                "temperature_c": {
+                    "type": "number",
+                    "example": 25.5
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}
