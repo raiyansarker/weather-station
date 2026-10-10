@@ -10,6 +10,7 @@ import (
 
 	_ "github.com/raiyan/weather-station/api/docs" // Import swagger docs
 	"github.com/raiyan/weather-station/api/handlers"
+	"github.com/raiyan/weather-station/api/database"
 )
 
 // @title Weather Station API
@@ -20,6 +21,9 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	// Initialize database connection
+	database.ConnectDB()
+
 	app := fiber.New(fiber.Config{
 		ErrorHandler: func(c *fiber.Ctx, err error) error {
 			code := fiber.StatusInternalServerError
