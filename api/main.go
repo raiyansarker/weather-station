@@ -43,8 +43,8 @@ func main() {
 	// Serve the OpenAPI JSON file
 	app.Static("/swagger.json", "./docs/swagger.json")
 
-	// Serve Stoplight Elements UI
-	app.Get("/docs", func(c *fiber.Ctx) error {
+	// Serve Stoplight Elements UI on the home page
+	app.Get("/", func(c *fiber.Ctx) error {
 		c.Set("Content-Type", "text/html; charset=utf-8")
 		return c.SendString(`<!doctype html>
 <html lang="en">
@@ -70,6 +70,10 @@ func main() {
     />
   </body>
 </html>`)
+	})
+
+	app.Get("/docs", func(c *fiber.Ctx) error {
+		return c.Redirect("/")
 	})
 
 	// API Group
