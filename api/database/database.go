@@ -1,53 +1,65 @@
 package database
 
 import (
+	"context"
 	"log"
 	"os"
 
-	"github.com/raiyan/weather-station/api/models"
-	"gorm.io/driver/postgres"
-	"gorm.io/gorm"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-var DB *gorm.DB
+var DBQueries *Queries
+var Pool *pgxpool.Pool
 
 func ConnectDB() {
 	dsn := os.Getenv("DATABASE_URL")
 	if dsn == "" {
 		// Default connection string if not provided
-		dsn = "host=localhost user=postgres password=postgres dbname=weather_station port=5432 sslmode=disable"
+		dsn = "postgres://postgres:postgres@localhost:5432/weather_station?sslmode=disable"
 	}
 
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	pool, err := pgxpool.New(context.Background(), dsn)
 	if err != nil {
 		log.Fatalf("Failed to connect to database: %v", err)
 	}
 
 	log.Println("Database connection successfully opened")
 
-	// Auto Migrate the schemas
-	err = db.AutoMigrate(&models.Device{}, &models.WeatherReading{})
+	// Execute migrations directly (in a real app, use golang-migrate or similar)
+	schema := `
+	CREATE TABLE IF NOT EXISTS devices (
+		id VARCHAR(50) PRIMARY KEY,
+		name TEXT NOT NULL,
+		credential_hash TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'active',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+		last_seen_at TIMESTAMPTZ
+	);
+
+	CREATE TABLE IF NOT EXISTS weather_readings (
+		recorded_at TIMESTAMPTZ NOT NULL,
+		id UUID NOT NULL DEFAULT gen_random_uuid(),
+		device_id VARCHAR(50) NOT NULL REFERENCES devices(id),
+		temperature_c DOUBLE PRECISION NOT NULL,
+		relative_humidity_pct DOUBLE PRECISION NOT NULL,
+		pressure_hpa DOUBLE PRECISION NOT NULL,
+		light_level INTEGER NOT NULL,
+		PRIMARY KEY (recorded_at, id)
+	);
+
+	DO $$
+	BEGIN
+		IF NOT EXISTS (SELECT 1 FROM timescaledb_information.hypertables WHERE hypertable_name = 'weather_readings') THEN
+			PERFORM create_hypertable('weather_readings', 'recorded_at', if_not_exists => TRUE);
+		END IF;
+	END $$;
+	`
+	_, err = pool.Exec(context.Background(), schema)
 	if err != nil {
 		log.Fatalf("Failed to migrate database schemas: %v", err)
 	}
+	log.Println("Database schemas and hypertable migrated successfully")
 
-	// Create TimescaleDB Hypertable for weather_readings if it doesn't exist
-	var exists bool
-	db.Raw(`SELECT EXISTS (
-		SELECT 1 FROM timescaledb_information.hypertables 
-		WHERE hypertable_name = 'weather_readings'
-	)`).Scan(&exists)
-
-	if !exists {
-		log.Println("Creating TimescaleDB hypertable for weather_readings...")
-		// Assuming timescaledb extension is already installed in the database:
-		// CREATE EXTENSION IF NOT EXISTS timescaledb;
-		err = db.Exec("SELECT create_hypertable('weather_readings', 'recorded_at', if_not_exists => TRUE);").Error
-		if err != nil {
-			log.Fatalf("Failed to create hypertable: %v", err)
-		}
-		log.Println("Hypertable created successfully")
-	}
-
-	DB = db
+	Pool = pool
+	DBQueries = New(pool)
 }

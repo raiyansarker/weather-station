@@ -2,6 +2,8 @@ package handlers
 
 import (
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/raiyan/weather-station/api/database"
 	"github.com/raiyan/weather-station/api/models"
 )
 
@@ -31,10 +33,28 @@ func UploadTelemetry(c *fiber.Ctx) error {
 
 	// TODO: Validate device ID and authentication header
 	// TODO: Validate reading data (timestamps, ranges)
-	// TODO: Save to database
+	
+	// Hardcoding device ID for now since auth isn't fully implemented
+	deviceID := "esp32-station-01"
+
+	inserted, err := database.DBQueries.InsertWeatherReading(c.Context(), database.InsertWeatherReadingParams{
+		RecordedAt:          pgtype.Timestamptz{Time: reading.RecordedAt, Valid: true},
+		DeviceID:            deviceID,
+		TemperatureC:        reading.TemperatureC,
+		RelativeHumidityPct: reading.RelativeHumidityPct,
+		PressureHpa:         reading.PressureHpa,
+		LightLevel:          int32(reading.LightLevel),
+	})
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to save reading to database",
+			Code:  fiber.StatusInternalServerError,
+		})
+	}
 
 	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
 		"message": "Reading accepted successfully",
-		"recorded_at": reading.RecordedAt,
+		"recorded_at": inserted.RecordedAt.Time,
 	})
 }

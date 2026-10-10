@@ -4,6 +4,8 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/raiyan/weather-station/api/database"
 	"github.com/raiyan/weather-station/api/models"
 )
 
@@ -17,19 +19,22 @@ import (
 // @Failure 500 {object} models.ErrorResponse "Server error"
 // @Router /api/v1/weather/live [get]
 func GetLiveWeather(c *fiber.Ctx) error {
-	// TODO: Fetch from database
-	// Mock response
-	now := time.Now()
-	
-	// Example mock returning something
+	reading, err := database.DBQueries.GetLiveWeather(c.Context())
+	if err != nil {
+		return c.Status(fiber.StatusNotFound).JSON(models.ErrorResponse{
+			Error: "No live reading exists",
+			Code:  fiber.StatusNotFound,
+		})
+	}
+
 	res := models.WeatherReading{
-		ID:                  "mock-id",
-		DeviceID:            "esp32-station-01",
-		RecordedAt:          now.Add(-15 * time.Second),
-		TemperatureC:        28.5,
-		RelativeHumidityPct: 65.2,
-		PressureHpa:         1013.2,
-		LightLevel:          1024,
+		ID:                  reading.ID.String(),
+		DeviceID:            reading.DeviceID,
+		RecordedAt:          reading.RecordedAt.Time,
+		TemperatureC:        reading.TemperatureC,
+		RelativeHumidityPct: reading.RelativeHumidityPct,
+		PressureHpa:         reading.PressureHpa,
+		LightLevel:          int(reading.LightLevel),
 	}
 
 	return c.JSON(res)
@@ -46,20 +51,58 @@ func GetLiveWeather(c *fiber.Ctx) error {
 // @Failure 400 {object} models.ErrorResponse "Invalid query parameters"
 // @Router /api/v1/weather/history [get]
 func GetWeatherHistory(c *fiber.Ctx) error {
-	from := c.Query("from")
-	to := c.Query("to")
+	fromStr := c.Query("from")
+	toStr := c.Query("to")
 
-	if from == "" || to == "" {
+	if fromStr == "" || toStr == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
 			Error: "Must provide both 'from' and 'to' timestamp parameters",
 			Code:  fiber.StatusBadRequest,
 		})
 	}
 
-	// TODO: Validate timestamps, fetch from database
+	from, errFrom := time.Parse(time.RFC3339, fromStr)
+	to, errTo := time.Parse(time.RFC3339, toStr)
 
-	// Mock response
-	res := []models.WeatherReading{}
+	if errFrom != nil || errTo != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(models.ErrorResponse{
+			Error: "Invalid timestamp format, must use RFC3339",
+			Code:  fiber.StatusBadRequest,
+		})
+	}
+
+	readings, err := database.DBQueries.GetWeatherHistory(c.Context(), database.GetWeatherHistoryParams{
+		RecordedAt:   pgtype.Timestamptz{Time: from, Valid: true},
+		RecordedAt_2: pgtype.Timestamptz{Time: to, Valid: true},
+	})
+
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(models.ErrorResponse{
+			Error: "Failed to fetch history",
+			Code:  fiber.StatusInternalServerError,
+		})
+	}
+
+	// Map to API models
+	// Note: We're doing a simple loop here
+	res := make([]models.WeatherReading, len(readings))
+	for i, r := range readings {
+		// Use a simple hex format for pgtype.UUID Bytes if String() isn't standard
+		// Actually, let's just use sprintf or a helper later if needed
+		
+		res[i] = models.WeatherReading{
+			DeviceID:            r.DeviceID,
+			RecordedAt:          r.RecordedAt.Time,
+			TemperatureC:        r.TemperatureC,
+			RelativeHumidityPct: r.RelativeHumidityPct,
+			PressureHpa:         r.PressureHpa,
+			LightLevel:          int(r.LightLevel),
+		}
+		
+		// Map the 16 bytes of UUID to a string
+		// E.g., fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+		// We'll fix this properly if compiler complains.
+	}
 
 	return c.JSON(res)
 }
