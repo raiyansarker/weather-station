@@ -70,7 +70,6 @@ export function DashboardPage() {
     acknowledgeAlert,
   } = useFleet()
 
-  const latestPings = recentPings.slice(0, 4)
   const openAlerts = alerts.filter((a) => !a.acknowledged)
   const recentBeacons = [...beacons].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6)
   const dashboardDevices = settings.showOfflineOnDashboard
@@ -78,9 +77,9 @@ export function DashboardPage() {
     : devices.filter((d) => d.status !== 'offline')
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h5" component="h1" gutterBottom>
+        <Typography variant="h5" component="h1" sx={{ mb: 0.75 }}>
           Dashboard
         </Typography>
         <Typography variant="body2" color="text.secondary">
@@ -164,7 +163,11 @@ export function DashboardPage() {
                           component={RouterLink}
                           to={`/devices/${a.deviceId}`}
                           variant="caption"
-                          sx={{ color: 'primary.main', textDecoration: 'none' }}
+                          sx={{
+                          color: 'text.primary',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: 2,
+                        }}
                         >
                           {deviceName(a.deviceId)}
                         </Typography>
@@ -217,7 +220,11 @@ export function DashboardPage() {
                         component={RouterLink}
                         to={`/devices/${b.deviceId}`}
                         variant="body2"
-                        sx={{ color: 'primary.main', textDecoration: 'none' }}
+                        sx={{
+                          color: 'text.primary',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: 2,
+                        }}
                       >
                         {deviceName(b.deviceId)}
                       </Typography>
@@ -263,7 +270,11 @@ export function DashboardPage() {
                         component={RouterLink}
                         to={`/devices/${r.deviceId}`}
                         variant="body2"
-                        sx={{ color: 'primary.main', textDecoration: 'none' }}
+                        sx={{
+                          color: 'text.primary',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: 2,
+                        }}
                       >
                         {deviceName(r.deviceId)}
                       </Typography>
@@ -294,7 +305,8 @@ export function DashboardPage() {
                 </TableRow>
               </TableHead>
               <TableBody>
-                {latestPings
+                {recentPings
+                  .slice(0, 4)
                   .filter((p) => dashboardDevices.some((d) => d.id === p.deviceId))
                   .map((p) => {
                     const device = devices.find((d) => d.id === p.deviceId)!
@@ -309,7 +321,11 @@ export function DashboardPage() {
                             component={RouterLink}
                             to={`/devices/${p.deviceId}`}
                             variant="body2"
-                            sx={{ color: 'primary.main', textDecoration: 'none' }}
+                            sx={{
+                          color: 'text.primary',
+                          textDecoration: 'underline',
+                          textUnderlineOffset: 2,
+                        }}
                           >
                             {device.name}
                           </Typography>

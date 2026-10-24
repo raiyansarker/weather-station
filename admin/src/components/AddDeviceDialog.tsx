@@ -11,14 +11,14 @@ import TextField from '@mui/material/TextField'
 
 import { useFleet, type NewDeviceInput } from '../fleet/FleetContext'
 
-const emptyForm: NewDeviceInput = {
+const emptyForm = (defaultSsid: string): NewDeviceInput => ({
   id: '',
   name: '',
   model: 'ESP32-WROOM-32',
   location: '',
   ip: '',
   mac: '',
-  ssid: '',
+  ssid: defaultSsid,
   mqttTopic: '',
   firmware: '1.4.2',
   firmwareChannel: 'stable',
@@ -26,7 +26,7 @@ const emptyForm: NewDeviceInput = {
   sensors: 'BME280, BH1750',
   tags: 'outdoor',
   notes: '',
-}
+})
 
 type Props = {
   open: boolean
@@ -36,10 +36,7 @@ type Props = {
 
 export function AddDeviceDialog({ open, onClose, onAdded }: Props) {
   const { addDevice, settings } = useFleet()
-  const [form, setForm] = useState<NewDeviceInput>({
-    ...emptyForm,
-    ssid: settings.defaultSsid,
-  })
+  const [form, setForm] = useState<NewDeviceInput>(() => emptyForm(settings.defaultSsid))
   const [error, setError] = useState<string | null>(null)
 
   function setField<K extends keyof NewDeviceInput>(key: K, value: NewDeviceInput[K]) {
@@ -48,7 +45,7 @@ export function AddDeviceDialog({ open, onClose, onAdded }: Props) {
 
   function handleClose() {
     setError(null)
-    setForm({ ...emptyForm, ssid: settings.defaultSsid })
+    setForm(emptyForm(settings.defaultSsid))
     onClose()
   }
 
@@ -84,7 +81,7 @@ export function AddDeviceDialog({ open, onClose, onAdded }: Props) {
                 placeholder="esp32-patio-05"
                 value={form.id}
                 onChange={(e) => setField('id', e.target.value)}
-                helperText="Unique ID used by the Go API / MQTT topic"
+                helperText="Unique ID used by the Go API"
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
@@ -151,7 +148,7 @@ export function AddDeviceDialog({ open, onClose, onAdded }: Props) {
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
-                label="MQTT topic"
+                label="Topic / path"
                 fullWidth
                 size="small"
                 placeholder="station/patio/telemetry"

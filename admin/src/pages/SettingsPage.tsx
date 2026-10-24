@@ -12,8 +12,8 @@ import Switch from '@mui/material/Switch'
 import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 
-import { useFleet } from '../fleet/FleetContext'
 import type { AppSettings } from '../data/settings'
+import { useFleet } from '../fleet/FleetContext'
 
 function Section({
   title,
@@ -91,10 +91,7 @@ export function SettingsPage() {
         </Alert>
       )}
 
-      <Section
-        title="API connection"
-        description="Where Weather Admin talks to the Go backend."
-      >
+      <Section title="API connection" description="Where Weather Admin talks to the Go backend.">
         <TextField
           label="API base URL"
           fullWidth
@@ -111,11 +108,12 @@ export function SettingsPage() {
           onChange={(e) => setField('apiKey', e.target.value)}
         />
         <TextField
-          label="MQTT broker"
+          label="Broker URL (unused)"
           fullWidth
           size="small"
           value={draft.mqttBroker}
           onChange={(e) => setField('mqttBroker', e.target.value)}
+          helperText="Not used by the Go API — demo field only."
         />
       </Section>
 
@@ -155,10 +153,7 @@ export function SettingsPage() {
         </Typography>
       </Section>
 
-      <Section
-        title="Units & display"
-        description="How readings and lists appear in the console."
-      >
+      <Section title="Units & display" description="How readings and lists appear in the console.">
         <TextField
           select
           label="Temperature unit"
@@ -237,7 +232,6 @@ export function SettingsPage() {
           size="small"
           value={draft.weakRssiThreshold}
           onChange={(e) => setField('weakRssiThreshold', Number(e.target.value))}
-          helperText="At or below this RSSI → weak"
         />
         <TextField
           label="Ping interval (seconds)"

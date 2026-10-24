@@ -26,25 +26,26 @@ export function DevicesPage() {
   const navigate = useNavigate()
 
   return (
-    <Stack spacing={3}>
-      <Stack
-        direction={{ xs: 'column', sm: 'row' }}
-        spacing={2}
-        alignItems={{ sm: 'flex-start' }}
-        justifyContent="space-between"
-      >
-        <Box>
-          <Typography variant="h5" component="h1" gutterBottom>
+    <Stack spacing={2.5}>
+      <Box>
+        <Stack
+          direction="row"
+          alignItems="center"
+          justifyContent="space-between"
+          spacing={2}
+          sx={{ mb: 0.75 }}
+        >
+          <Typography variant="h5" component="h1">
             Devices
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            ESP32 fleet — provision nodes, open a row for hardware and beacons.
-          </Typography>
-        </Box>
-        <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
-          Add device
-        </Button>
-      </Stack>
+          <Button variant="contained" startIcon={<AddIcon />} onClick={() => setOpen(true)}>
+            Add device
+          </Button>
+        </Stack>
+        <Typography variant="body2" color="text.secondary">
+          ESP32 fleet — provision nodes, open a row for hardware and beacons.
+        </Typography>
+      </Box>
 
       <Paper variant="outlined" sx={{ overflow: 'auto' }}>
         <Table size="small">
@@ -88,7 +89,10 @@ export function DevicesPage() {
                   </TableCell>
                   <TableCell
                     align="right"
-                    sx={{ color: highPing ? 'error.main' : 'inherit', fontWeight: highPing ? 600 : 400 }}
+                    sx={{
+                      color: highPing ? 'error.main' : 'inherit',
+                      fontWeight: highPing ? 600 : 400,
+                    }}
                   >
                     {d.lastPingMs != null ? `${d.lastPingMs} ms` : '—'}
                   </TableCell>
@@ -114,22 +118,6 @@ export function DevicesPage() {
                 </TableRow>
               )
             })}
-            {devices.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={9}>
-                  <Typography
-                    variant="body2"
-                    color="text.secondary"
-                    sx={{ py: 4, textAlign: 'center' }}
-                  >
-                    No devices yet.{' '}
-                    <Button size="small" onClick={() => setOpen(true)}>
-                      Add one
-                    </Button>
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            )}
           </TableBody>
         </Table>
       </Paper>

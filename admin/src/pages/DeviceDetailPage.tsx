@@ -31,7 +31,7 @@ function InfoRow({ label, value }: { label: string; value: ReactNode }) {
       <Typography variant="body2" color="text.secondary">
         {label}
       </Typography>
-      <Typography variant="body2" textAlign="right" sx={{ fontFamily: 'inherit' }}>
+      <Typography variant="body2" textAlign="right">
         {value}
       </Typography>
     </Stack>
@@ -132,9 +132,12 @@ export function DeviceDetailPage() {
               label="Last ping"
               value={device.lastPingMs != null ? `${device.lastPingMs} ms` : 'timeout'}
             />
-            <InfoRow label="Avg ping" value={device.avgPingMs != null ? `${device.avgPingMs} ms` : '—'} />
+            <InfoRow
+              label="Avg ping"
+              value={device.avgPingMs != null ? `${device.avgPingMs} ms` : '—'}
+            />
             <InfoRow label="Packet loss" value={`${device.packetLossPct.toFixed(1)}%`} />
-            <InfoRow label="MQTT topic" value={<Mono>{device.mqttTopic}</Mono>} />
+            <InfoRow label="Topic" value={<Mono>{device.mqttTopic}</Mono>} />
           </Paper>
         </Grid>
 
@@ -158,12 +161,10 @@ export function DeviceDetailPage() {
             <InfoRow
               label="Power"
               value={
-                device.power === 'battery'
-                  ? `Battery ${device.batteryPct ?? '?'}%`
-                  : 'Mains'
+                device.power === 'battery' ? `Battery ${device.batteryPct ?? '?'}%` : 'Mains'
               }
             />
-            <InfoRow label="Sensors" value={device.sensors.join(', ')} />
+            <InfoRow label="Sensors" value={device.sensors.join(', ') || '—'} />
           </Paper>
         </Grid>
 
@@ -194,17 +195,7 @@ export function DeviceDetailPage() {
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>
           <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-            <Box
-              sx={{
-                px: 2,
-                py: 1.5,
-                borderBottom: 1,
-                borderColor: 'divider',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-              }}
-            >
+            <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
               <Typography variant="subtitle1">Recent readings</Typography>
             </Box>
             <Table size="small">
@@ -246,11 +237,7 @@ export function DeviceDetailPage() {
               }}
             >
               <Typography variant="subtitle1">Beacons</Typography>
-              <Button
-                component={RouterLink}
-                to={`/logs?device=${device.id}`}
-                size="small"
-              >
+              <Button component={RouterLink} to={`/logs?device=${device.id}`} size="small">
                 View all
               </Button>
             </Box>
