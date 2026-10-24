@@ -24,8 +24,8 @@ export function TopBar() {
   const { pathname } = useLocation()
 
   return (
-    <AppBar position="sticky">
-      <Toolbar sx={{ position: 'relative' }}>
+    <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#1a1a1a', color: '#fff' }}>
+      <Toolbar sx={{ position: 'relative', minHeight: { xs: 56, sm: 56 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, zIndex: 1 }}>
           <WbCloudyIcon sx={{ mr: 1.5 }} />
           <Typography
@@ -34,6 +34,7 @@ export function TopBar() {
             to="/"
             sx={{
               fontWeight: 500,
+              fontSize: 16,
               color: 'inherit',
               textDecoration: 'none',
               whiteSpace: 'nowrap',
@@ -66,9 +67,10 @@ export function TopBar() {
                   px: 1.5,
                   minWidth: 'auto',
                   fontWeight: 500,
-                  opacity: active ? 1 : 0.72,
+                  color: active ? '#fff' : 'rgba(255,255,255,0.72)',
+                  opacity: 1,
                   transition: 'none',
-                  '&:hover': { bgcolor: 'transparent', opacity: 1 },
+                  '&:hover': { bgcolor: 'transparent', color: '#fff' },
                 }}
               >
                 {item.label}
@@ -86,9 +88,10 @@ export function TopBar() {
             disableRipple
             sx={{
               transition: 'none',
-              bgcolor: pathname === '/settings' ? 'rgba(255,255,255,0.16)' : 'transparent',
+              bgcolor: pathname === '/settings' ? 'rgba(255,255,255,0.12)' : 'transparent',
               '&:hover': {
-                bgcolor: pathname === '/settings' ? 'rgba(255,255,255,0.16)' : 'transparent',
+                bgcolor:
+                  pathname === '/settings' ? 'rgba(255,255,255,0.12)' : 'transparent',
               },
             }}
           >

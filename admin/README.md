@@ -1,4 +1,4 @@
-# Weather Station Admin
+# Weather Admin
 
 Client-side React admin panel (Vite + Material UI). Talks to the Go API; not served by Fiber in development.
 
@@ -15,4 +15,5 @@ Opens on `http://localhost:5173`. Vite proxies `/api` and `/health` to the Go se
 
 - Vite + React + TypeScript
 - React Router
-- Material UI (solid black AppBar)
+- Material UI components
+- Shopify-style layout: dark chrome + curved light content well
