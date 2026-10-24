@@ -15,5 +15,5 @@ Opens on `http://localhost:5173`. Vite proxies `/api` and `/health` to the Go se
 
 - Vite + React + TypeScript
 - React Router
-- Material UI components
+- Material UI components + MUI X Charts
 - Shopify-style layout: dark chrome + curved light content well
