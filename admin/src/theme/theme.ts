@@ -58,12 +58,8 @@ export const theme = createTheme({
           paddingBlock: 5,
         },
         contained: {
-          backgroundColor: '#1a1a1a',
-          color: '#fff',
-          '&:hover': {
-            backgroundColor: '#000',
-            boxShadow: 'none',
-          },
+          boxShadow: 'none',
+          '&:hover': { boxShadow: 'none' },
           '&.Mui-disabled': {
             backgroundColor: '#e3e3e3',
             color: '#8c9196',
@@ -71,28 +67,48 @@ export const theme = createTheme({
         },
         containedPrimary: {
           backgroundColor: '#1a1a1a',
+          color: '#fff',
           '&:hover': { backgroundColor: '#000' },
         },
+        containedError: {
+          backgroundColor: '#c62828',
+          color: '#fff',
+          '&:hover': { backgroundColor: '#b71c1c' },
+        },
         outlined: {
+          paddingInline: 9,
+        },
+        outlinedPrimary: {
           borderColor: '#1a1a1a',
           color: '#1a1a1a',
           backgroundColor: 'transparent',
-          paddingInline: 9,
           '&:hover': {
             borderColor: '#000',
             backgroundColor: 'rgba(26,26,26,0.04)',
           },
         },
-        outlinedPrimary: {
-          borderColor: '#1a1a1a',
-          color: '#1a1a1a',
+        outlinedError: {
+          borderColor: '#c62828',
+          color: '#c62828',
+          '&:hover': {
+            borderColor: '#b71c1c',
+            backgroundColor: 'rgba(198,40,40,0.04)',
+          },
         },
         text: {
-          color: '#1a1a1a',
           minHeight: 28,
           paddingInline: 8,
+        },
+        textPrimary: {
+          color: '#1a1a1a',
           '&:hover': {
             backgroundColor: 'rgba(26,26,26,0.04)',
+          },
+        },
+        textError: {
+          color: '#c62828',
+          '&:hover': {
+            backgroundColor: 'rgba(198,40,40,0.04)',
           },
         },
         textInherit: {
