@@ -26,11 +26,11 @@ export type Device = {
   cpuTempC: number | null
   freeHeapKb: number | null
   flashMb: number
-  power: 'mains' | 'battery'
-  batteryPct: number | null
   sensors: string[]
   tags: string[]
   notes: string
+  /** Ed25519 SPKI public key (base64). Null on demo seeds; set when provisioning. */
+  publicKeySpkiB64: string | null
 }
 
 export type WeatherReading = {
@@ -60,7 +60,6 @@ export type DeviceBeacon = {
   rssiDbm: number | null
   uptimeSec: number
   freeHeapKb: number | null
-  batteryPct: number | null
   firmware: string
   intervalSec: number
   payloadBytes: number
@@ -101,11 +100,10 @@ export const devices: Device[] = [
     cpuTempC: 46.2,
     freeHeapKb: 184,
     flashMb: 4,
-    power: 'mains',
-    batteryPct: null,
     sensors: ['BME280', 'BH1750', 'DS18B20'],
     tags: ['primary', 'outdoor'],
     notes: 'Primary uplink. Mounted under solar shield.',
+    publicKeySpkiB64: null,
   },
   {
     id: 'esp32-garden-02',
@@ -131,11 +129,10 @@ export const devices: Device[] = [
     cpuTempC: 51.8,
     freeHeapKb: 212,
     flashMb: 8,
-    power: 'battery',
-    batteryPct: 78,
     sensors: ['BME680', 'TSL2591', 'Soil moisture'],
     tags: ['outdoor', 'garden'],
-    notes: 'Battery-backed. Soil probe buried 8cm.',
+    notes: 'Soil probe buried 8cm.',
+    publicKeySpkiB64: null,
   },
   {
     id: 'esp32-shed-03',
@@ -161,11 +158,10 @@ export const devices: Device[] = [
     cpuTempC: 58.4,
     freeHeapKb: 96,
     flashMb: 4,
-    power: 'mains',
-    batteryPct: null,
     sensors: ['BME280', 'PIR'],
     tags: ['indoor', 'beta'],
     notes: 'Weak Wi‑Fi through metal shed. OTA stuck mid-retry.',
+    publicKeySpkiB64: null,
   },
   {
     id: 'esp32-balcony-04',
@@ -191,11 +187,10 @@ export const devices: Device[] = [
     cpuTempC: null,
     freeHeapKb: null,
     flashMb: 4,
-    power: 'battery',
-    batteryPct: 4,
     sensors: ['DHT22', 'BH1750'],
     tags: ['outdoor', 'legacy'],
-    notes: 'Likely battery dead. Last brownout before drop.',
+    notes: 'Offline after Wi‑Fi loss; last event was a brownout.',
+    publicKeySpkiB64: null,
   },
 ]
 
@@ -229,91 +224,110 @@ export const liveReadings: WeatherReading[] = [
   },
 ]
 
-export const historyReadings: WeatherReading[] = [
-  {
-    id: 'rd-0901',
-    deviceId: 'esp32-roof-01',
-    recordedAt: '2026-10-24T09:45:00Z',
-    temperatureC: 28.1,
-    relativeHumidityPct: 65.0,
-    pressureHpa: 1008.4,
-    lightLevel: 3980,
-  },
-  {
-    id: 'rd-0902',
-    deviceId: 'esp32-garden-02',
-    recordedAt: '2026-10-24T09:45:00Z',
-    temperatureC: 26.9,
-    relativeHumidityPct: 72.4,
-    pressureHpa: 1009.0,
-    lightLevel: 2710,
-  },
-  {
-    id: 'rd-0903',
-    deviceId: 'esp32-roof-01',
-    recordedAt: '2026-10-24T09:30:00Z',
-    temperatureC: 27.8,
-    relativeHumidityPct: 66.1,
-    pressureHpa: 1008.2,
-    lightLevel: 3650,
-  },
-  {
-    id: 'rd-0904',
-    deviceId: 'esp32-shed-03',
-    recordedAt: '2026-10-24T09:30:00Z',
-    temperatureC: 25.2,
-    relativeHumidityPct: 79.3,
-    pressureHpa: 1008.7,
-    lightLevel: 380,
-  },
-  {
-    id: 'rd-0905',
-    deviceId: 'esp32-garden-02',
-    recordedAt: '2026-10-24T09:15:00Z',
-    temperatureC: 26.4,
-    relativeHumidityPct: 73.5,
-    pressureHpa: 1008.8,
-    lightLevel: 2400,
-  },
-  {
-    id: 'rd-0906',
+/** Deterministic demo noise (no Math.random) so charts stay stable. */
+function demoNoise(n: number): number {
+  const x = Math.sin(n * 12.9898) * 43758.5453
+  return x - Math.floor(x)
+}
+
+function buildHistoryReadings(): WeatherReading[] {
+  const end = Date.parse('2026-10-24T09:45:00Z')
+  const profiles = [
+    {
+      id: 'esp32-roof-01',
+      baseTemp: 27.4,
+      amp: 1.9,
+      baseRh: 66,
+      basePress: 1008.4,
+      baseLight: 3400,
+    },
+    {
+      id: 'esp32-garden-02',
+      baseTemp: 26.1,
+      amp: 2.3,
+      baseRh: 73,
+      basePress: 1009.0,
+      baseLight: 2500,
+    },
+    {
+      id: 'esp32-shed-03',
+      baseTemp: 24.9,
+      amp: 1.1,
+      baseRh: 78,
+      basePress: 1008.8,
+      baseLight: 420,
+    },
+  ] as const
+
+  const out: WeatherReading[] = []
+  let n = 0
+  // 12 hours @ 15 min → 48 ticks × 3 devices
+  for (let step = 48; step >= 1; step -= 1) {
+    const ms = end - step * 15 * 60_000
+    const at = new Date(ms).toISOString()
+    const hour = new Date(ms).getUTCHours() + new Date(ms).getUTCMinutes() / 60
+    for (const p of profiles) {
+      n += 1
+      const wave = Math.sin(((hour - 6) / 24) * Math.PI * 2)
+      const jitter = (demoNoise(n) - 0.5) * 0.4
+      out.push({
+        id: `rd-h${String(n).padStart(3, '0')}`,
+        deviceId: p.id,
+        recordedAt: at,
+        temperatureC: Number((p.baseTemp + p.amp * wave + jitter).toFixed(1)),
+        relativeHumidityPct: Number(
+          (p.baseRh - wave * 4 + (demoNoise(n + 7) - 0.5) * 1.5).toFixed(1),
+        ),
+        pressureHpa: Number((p.basePress + wave * 0.6 + (demoNoise(n + 3) - 0.5) * 0.2).toFixed(1)),
+        lightLevel: Math.max(
+          10,
+          Math.round(p.baseLight * (0.15 + 0.85 * Math.max(0, Math.sin(((hour - 5) / 14) * Math.PI)))),
+        ),
+      })
+    }
+  }
+
+  out.push({
+    id: 'rd-hbal',
     deviceId: 'esp32-balcony-04',
     recordedAt: '2026-10-23T21:14:00Z',
     temperatureC: 24.0,
     relativeHumidityPct: 81.2,
     pressureHpa: 1010.3,
     lightLevel: 15,
-  },
-  {
-    id: 'rd-0907',
-    deviceId: 'esp32-roof-01',
-    recordedAt: '2026-10-24T09:00:00Z',
-    temperatureC: 27.2,
-    relativeHumidityPct: 67.8,
-    pressureHpa: 1008.0,
-    lightLevel: 3100,
-  },
-  {
-    id: 'rd-0908',
-    deviceId: 'esp32-garden-02',
-    recordedAt: '2026-10-24T09:00:00Z',
-    temperatureC: 25.9,
-    relativeHumidityPct: 74.1,
-    pressureHpa: 1008.5,
-    lightLevel: 1980,
-  },
-]
+  })
 
-export const recentPings: PingSample[] = [
-  { deviceId: 'esp32-roof-01', at: '2026-10-24T09:52:05Z', latencyMs: 18, ok: true },
-  { deviceId: 'esp32-garden-02', at: '2026-10-24T09:52:05Z', latencyMs: 31, ok: true },
-  { deviceId: 'esp32-shed-03', at: '2026-10-24T09:52:05Z', latencyMs: 142, ok: true },
-  { deviceId: 'esp32-balcony-04', at: '2026-10-24T09:52:05Z', latencyMs: 0, ok: false },
-  { deviceId: 'esp32-roof-01', at: '2026-10-24T09:51:05Z', latencyMs: 21, ok: true },
-  { deviceId: 'esp32-garden-02', at: '2026-10-24T09:51:05Z', latencyMs: 29, ok: true },
-  { deviceId: 'esp32-shed-03', at: '2026-10-24T09:51:05Z', latencyMs: 118, ok: true },
-  { deviceId: 'esp32-balcony-04', at: '2026-10-24T09:51:05Z', latencyMs: 0, ok: false },
-]
+  return out
+}
+
+export const historyReadings: WeatherReading[] = buildHistoryReadings()
+
+function buildRecentPings(): PingSample[] {
+  const end = Date.parse('2026-10-24T09:52:05Z')
+  const profiles = [
+    { id: 'esp32-roof-01', base: 20, spread: 6 },
+    { id: 'esp32-garden-02', base: 32, spread: 8 },
+    { id: 'esp32-shed-03', base: 125, spread: 28 },
+  ] as const
+  const out: PingSample[] = []
+  for (let step = 29; step >= 0; step -= 1) {
+    const at = new Date(end - step * 60_000).toISOString()
+    for (const p of profiles) {
+      const n = step * 10 + p.base
+      const latencyMs = Math.max(8, Math.round(p.base + (demoNoise(n) - 0.5) * p.spread * 2))
+      out.push({ deviceId: p.id, at, latencyMs, ok: true })
+    }
+    out.push({
+      deviceId: 'esp32-balcony-04',
+      at,
+      latencyMs: 0,
+      ok: false,
+    })
+  }
+  return out
+}
+
+export const recentPings: PingSample[] = buildRecentPings()
 
 export const deviceBeacons: DeviceBeacon[] = [
   {
@@ -325,7 +339,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -51,
     uptimeSec: 1_123_200,
     freeHeapKb: 184,
-    batteryPct: null,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 48,
@@ -339,7 +352,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -67,
     uptimeSec: 676_800,
     freeHeapKb: 212,
-    batteryPct: 78,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 52,
@@ -353,7 +365,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -81,
     uptimeSec: 194_400,
     freeHeapKb: 96,
-    batteryPct: null,
     firmware: '1.3.9',
     intervalSec: 60,
     payloadBytes: 48,
@@ -367,7 +378,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: null,
     uptimeSec: 0,
     freeHeapKb: null,
-    batteryPct: 4,
     firmware: '1.2.0',
     intervalSec: 60,
     payloadBytes: 0,
@@ -381,7 +391,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -52,
     uptimeSec: 1_123_140,
     freeHeapKb: 186,
-    batteryPct: null,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 48,
@@ -395,7 +404,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -66,
     uptimeSec: 676_740,
     freeHeapKb: 210,
-    batteryPct: 78,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 52,
@@ -409,7 +417,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -79,
     uptimeSec: 194_340,
     freeHeapKb: 98,
-    batteryPct: null,
     firmware: '1.3.9',
     intervalSec: 60,
     payloadBytes: 48,
@@ -423,7 +430,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -82,
     uptimeSec: 194_280,
     freeHeapKb: 94,
-    batteryPct: null,
     firmware: '1.3.9',
     intervalSec: 60,
     payloadBytes: 48,
@@ -437,7 +443,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -50,
     uptimeSec: 1_123_080,
     freeHeapKb: 185,
-    batteryPct: null,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 48,
@@ -451,7 +456,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -68,
     uptimeSec: 676_680,
     freeHeapKb: 214,
-    batteryPct: 79,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 52,
@@ -465,7 +469,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -88,
     uptimeSec: 86_400,
     freeHeapKb: 72,
-    batteryPct: 4,
     firmware: '1.2.0',
     intervalSec: 60,
     payloadBytes: 44,
@@ -479,7 +482,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -86,
     uptimeSec: 86_340,
     freeHeapKb: 74,
-    batteryPct: 5,
     firmware: '1.2.0',
     intervalSec: 60,
     payloadBytes: 44,
@@ -493,7 +495,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -51,
     uptimeSec: 1_122_780,
     freeHeapKb: 188,
-    batteryPct: null,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 48,
@@ -507,7 +508,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -80,
     uptimeSec: 194_040,
     freeHeapKb: 101,
-    batteryPct: null,
     firmware: '1.3.9',
     intervalSec: 60,
     payloadBytes: 48,
@@ -521,7 +521,6 @@ export const deviceBeacons: DeviceBeacon[] = [
     rssiDbm: -65,
     uptimeSec: 676_140,
     freeHeapKb: 209,
-    batteryPct: 79,
     firmware: '1.4.2',
     intervalSec: 60,
     payloadBytes: 52,
@@ -534,7 +533,7 @@ export const fleetAlerts: FleetAlert[] = [
     deviceId: 'esp32-balcony-04',
     severity: 'critical',
     title: 'Device offline',
-    detail: 'No heartbeat for 12h 38m. Last event was brownout at 4% battery.',
+    detail: 'No heartbeat for 12h 38m. Last event was a brownout before drop.',
     at: '2026-10-24T09:52:05Z',
     acknowledged: false,
   },
@@ -560,8 +559,8 @@ export const fleetAlerts: FleetAlert[] = [
     id: 'al-4',
     deviceId: 'esp32-garden-02',
     severity: 'info',
-    title: 'Battery healthy',
-    detail: '78% remaining · estimated 41 hours at current draw.',
+    title: 'Node healthy',
+    detail: 'Garden node reporting clean heartbeats.',
     at: '2026-10-24T09:35:22Z',
     acknowledged: true,
   },
