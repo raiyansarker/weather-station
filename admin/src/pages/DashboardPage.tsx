@@ -18,9 +18,11 @@ import NetworkCheckIcon from '@mui/icons-material/NetworkCheck'
 import NotificationImportantIcon from '@mui/icons-material/NotificationImportant'
 import { Link as RouterLink } from 'react-router-dom'
 
+import { ChartPanel } from '../charts/ChartPanel'
+import { PingLatencyChart } from '../charts/PingLatencyChart'
+import { TemperatureChart } from '../charts/TemperatureChart'
 import { AlertSeverityChip } from '../components/AlertSeverityChip'
 import { BeaconStatusChip } from '../components/BeaconStatusChip'
-import { StatusChip } from '../components/StatusChip'
 import { formatBeaconUptime, formatTime } from '../data/demo'
 import { useFleet } from '../fleet/FleetContext'
 
@@ -59,10 +61,10 @@ function StatCard({
 
 export function DashboardPage() {
   const {
-    devices,
     beacons,
     alerts,
     liveReadings,
+    historyReadings,
     recentPings,
     fleetSummary,
     deviceName,
@@ -72,9 +74,8 @@ export function DashboardPage() {
 
   const openAlerts = alerts.filter((a) => !a.acknowledged)
   const recentBeacons = [...beacons].sort((a, b) => b.at.localeCompare(a.at)).slice(0, 6)
-  const dashboardDevices = settings.showOfflineOnDashboard
-    ? devices
-    : devices.filter((d) => d.status !== 'offline')
+  const chartDeviceIds = ['esp32-roof-01', 'esp32-garden-02', 'esp32-shed-03']
+  const allReadings = [...liveReadings, ...historyReadings]
 
   return (
     <Stack spacing={2.5}>
@@ -83,7 +84,7 @@ export function DashboardPage() {
           Dashboard
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Live fleet pulse — devices, ping, alerts, and beacon heartbeats.
+          Fleet pulse — trends, alerts, and recent beacons.
         </Typography>
       </Box>
 
@@ -119,6 +120,38 @@ export function DashboardPage() {
             subtitle={`${fleetSummary.missedBeacons} missed · ${fleetSummary.weakBeacons} weak`}
             icon={<CellTowerIcon />}
           />
+        </Grid>
+      </Grid>
+
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 7 }}>
+          <ChartPanel
+            title="Temperature"
+            subtitle={`Last 12 hours · ${settings.temperatureUnit === 'f' ? '°F' : '°C'}`}
+            action={
+              <Button component={RouterLink} to="/history" size="small">
+                History
+              </Button>
+            }
+          >
+            <TemperatureChart
+              readings={allReadings}
+              deviceIds={chartDeviceIds}
+              deviceLabel={deviceName}
+              temperatureUnit={settings.temperatureUnit}
+              height={260}
+            />
+          </ChartPanel>
+        </Grid>
+        <Grid size={{ xs: 12, md: 5 }}>
+          <ChartPanel title="Ping latency" subtitle="Last 30 minutes">
+            <PingLatencyChart
+              pings={recentPings}
+              deviceIds={chartDeviceIds}
+              deviceLabel={deviceName}
+              height={260}
+            />
+          </ChartPanel>
         </Grid>
       </Grid>
 
@@ -164,10 +197,10 @@ export function DashboardPage() {
                           to={`/devices/${a.deviceId}`}
                           variant="caption"
                           sx={{
-                          color: 'text.primary',
-                          textDecoration: 'underline',
-                          textUnderlineOffset: 2,
-                        }}
+                            color: 'text.primary',
+                            textDecoration: 'underline',
+                            textUnderlineOffset: 2,
+                          }}
                         >
                           {deviceName(a.deviceId)}
                         </Typography>
@@ -197,7 +230,7 @@ export function DashboardPage() {
             >
               <Typography variant="subtitle1">Recent beacons</Typography>
               <Button component={RouterLink} to="/logs" size="small">
-                Beacon log
+                View logs
               </Button>
             </Box>
             <Table size="small">
@@ -239,112 +272,6 @@ export function DashboardPage() {
                     <TableCell align="right">{formatBeaconUptime(b.uptimeSec)}</TableCell>
                   </TableRow>
                 ))}
-              </TableBody>
-            </Table>
-          </Paper>
-        </Grid>
-      </Grid>
-
-      <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 7 }}>
-          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-            <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle1">Live readings</Typography>
-            </Box>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Device</TableCell>
-                  <TableCell>Time</TableCell>
-                  <TableCell align="right">Temp °C</TableCell>
-                  <TableCell align="right">RH %</TableCell>
-                  <TableCell align="right">hPa</TableCell>
-                  <TableCell align="right">Light</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {liveReadings.map((r) => (
-                  <TableRow key={r.id} hover>
-                    <TableCell>
-                      <Typography
-                        component={RouterLink}
-                        to={`/devices/${r.deviceId}`}
-                        variant="body2"
-                        sx={{
-                          color: 'text.primary',
-                          textDecoration: 'underline',
-                          textUnderlineOffset: 2,
-                        }}
-                      >
-                        {deviceName(r.deviceId)}
-                      </Typography>
-                    </TableCell>
-                    <TableCell>{formatTime(r.recordedAt)}</TableCell>
-                    <TableCell align="right">{r.temperatureC.toFixed(1)}</TableCell>
-                    <TableCell align="right">{r.relativeHumidityPct.toFixed(1)}</TableCell>
-                    <TableCell align="right">{r.pressureHpa.toFixed(1)}</TableCell>
-                    <TableCell align="right">{r.lightLevel}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </Paper>
-        </Grid>
-
-        <Grid size={{ xs: 12, md: 5 }}>
-          <Paper variant="outlined" sx={{ overflow: 'hidden' }}>
-            <Box sx={{ px: 2, py: 1.5, borderBottom: 1, borderColor: 'divider' }}>
-              <Typography variant="subtitle1">Latest ping</Typography>
-            </Box>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Device</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Latency</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {recentPings
-                  .slice(0, 4)
-                  .filter((p) => dashboardDevices.some((d) => d.id === p.deviceId))
-                  .map((p) => {
-                    const device = devices.find((d) => d.id === p.deviceId)!
-                    const highPing =
-                      settings.highlightHighPing &&
-                      p.ok &&
-                      p.latencyMs > settings.highPingMs
-                    return (
-                      <TableRow key={`${p.deviceId}-${p.at}`} hover>
-                        <TableCell>
-                          <Typography
-                            component={RouterLink}
-                            to={`/devices/${p.deviceId}`}
-                            variant="body2"
-                            sx={{
-                          color: 'text.primary',
-                          textDecoration: 'underline',
-                          textUnderlineOffset: 2,
-                        }}
-                          >
-                            {device.name}
-                          </Typography>
-                        </TableCell>
-                        <TableCell>
-                          <StatusChip status={device.status} />
-                        </TableCell>
-                        <TableCell
-                          align="right"
-                          sx={{
-                            color: highPing ? 'error.main' : 'inherit',
-                            fontWeight: highPing ? 600 : 400,
-                          }}
-                        >
-                          {p.ok ? `${p.latencyMs} ms` : 'timeout'}
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
               </TableBody>
             </Table>
           </Paper>
