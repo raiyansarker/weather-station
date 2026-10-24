@@ -15,8 +15,14 @@ import TextField from '@mui/material/TextField'
 import Typography from '@mui/material/Typography'
 import { Link as RouterLink, useSearchParams } from 'react-router-dom'
 
+import { BeaconDetailSheet } from '../components/BeaconDetailSheet'
 import { BeaconStatusChip } from '../components/BeaconStatusChip'
-import { formatBeaconUptime, formatTime, type BeaconStatus } from '../data/demo'
+import {
+  formatBeaconUptime,
+  formatTime,
+  type BeaconStatus,
+  type DeviceBeacon,
+} from '../data/demo'
 import { useFleet } from '../fleet/FleetContext'
 
 const statuses: Array<BeaconStatus | 'all'> = ['all', 'ok', 'weak', 'missed']
@@ -26,10 +32,11 @@ export function LogsPage() {
   const [searchParams] = useSearchParams()
   const initialDevice = searchParams.get('device') ?? 'all'
   const [status, setStatus] = useState<BeaconStatus | 'all'>('all')
-  const [deviceId, setDeviceId] = useState<string>(
+  const [deviceId, setDeviceId] = useState(
     devices.some((d) => d.id === initialDevice) ? initialDevice : 'all',
   )
   const [query, setQuery] = useState('')
+  const [selected, setSelected] = useState<DeviceBeacon | null>(null)
 
   const rows = useMemo(() => {
     const q = query.trim().toLowerCase()
@@ -48,17 +55,17 @@ export function LogsPage() {
   }, [beacons, status, deviceId, query, deviceName])
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={2.5}>
       <Box>
-        <Typography variant="h5" component="h1" gutterBottom>
+        <Typography variant="h5" component="h1" sx={{ mb: 0.75 }}>
           Logs
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          Device beacon stream — periodic heartbeats with RSSI, uptime, heap, and battery.
+          Device beacon stream — click a row to open the detail sheet.
         </Typography>
       </Box>
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5}>
         <TextField
           size="small"
           label="Search"
@@ -83,11 +90,7 @@ export function LogsPage() {
         </FormControl>
         <FormControl size="small" sx={{ minWidth: 180 }}>
           <InputLabel>Device</InputLabel>
-          <Select
-            label="Device"
-            value={deviceId}
-            onChange={(e) => setDeviceId(e.target.value)}
-          >
+          <Select label="Device" value={deviceId} onChange={(e) => setDeviceId(e.target.value)}>
             <MenuItem value="all">All devices</MenuItem>
             {devices.map((d) => (
               <MenuItem key={d.id} value={d.id}>
@@ -116,14 +119,25 @@ export function LogsPage() {
           </TableHead>
           <TableBody>
             {rows.map((b) => (
-              <TableRow key={b.id} hover>
+              <TableRow
+                key={b.id}
+                hover
+                onClick={() => setSelected(b)}
+                sx={{ cursor: 'pointer' }}
+              >
                 <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatTime(b.at)}</TableCell>
-                <TableCell>
+                <TableCell
+                  onClick={(e) => e.stopPropagation()}
+                >
                   <Typography
                     component={RouterLink}
                     to={`/devices/${b.deviceId}`}
                     variant="body2"
-                    sx={{ color: 'primary.main', textDecoration: 'none' }}
+                    sx={{
+                      color: 'text.primary',
+                      textDecoration: 'underline',
+                      textUnderlineOffset: 2,
+                    }}
                   >
                     {deviceName(b.deviceId)}
                   </Typography>
@@ -156,7 +170,7 @@ export function LogsPage() {
                   <Typography
                     variant="body2"
                     color="text.secondary"
-                    sx={{ py: 3, textAlign: 'center' }}
+                    sx={{ py: 4, textAlign: 'center' }}
                   >
                     No beacons match these filters.
                   </Typography>
@@ -166,6 +180,12 @@ export function LogsPage() {
           </TableBody>
         </Table>
       </Paper>
+
+      <BeaconDetailSheet
+        beacon={selected}
+        deviceName={selected ? deviceName(selected.deviceId) : ''}
+        onClose={() => setSelected(null)}
+      />
     </Stack>
   )
 }
