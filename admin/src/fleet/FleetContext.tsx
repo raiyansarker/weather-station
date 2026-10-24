@@ -24,18 +24,10 @@ import { defaultSettings, type AppSettings } from '../data/settings'
 export type NewDeviceInput = {
   id: string
   name: string
-  model: string
   location: string
-  ip: string
-  mac: string
   ssid: string
-  mqttTopic: string
-  firmware: string
-  firmwareChannel: 'stable' | 'beta'
-  power: 'mains' | 'battery'
-  sensors: string
-  tags: string
-  notes: string
+  /** Ed25519 SPKI public key (base64) — kept for later API registration. */
+  publicKeySpkiB64: string
 }
 
 type FleetContextValue = {
@@ -69,23 +61,16 @@ type FleetContextValue = {
 
 const FleetContext = createContext<FleetContextValue | null>(null)
 
-function splitList(value: string): string[] {
-  return value
-    .split(',')
-    .map((s) => s.trim())
-    .filter(Boolean)
-}
-
 function buildDevice(input: NewDeviceInput, settings: AppSettings): Device {
   const now = new Date().toISOString()
   const status: DeviceStatus = 'offline'
   return {
     id: input.id.trim(),
     name: input.name.trim(),
-    model: input.model.trim() || 'ESP32-WROOM-32',
+    model: 'ESP32',
     chipRevision: 'unknown',
-    firmware: input.firmware.trim() || '1.0.0',
-    firmwareChannel: input.firmwareChannel,
+    firmware: '1.0.0',
+    firmwareChannel: 'stable',
     status,
     lastSeenAt: now,
     lastBootAt: now,
@@ -95,19 +80,18 @@ function buildDevice(input: NewDeviceInput, settings: AppSettings): Device {
     uptimeHours: 0,
     rebootCount: 0,
     location: input.location.trim() || 'Unassigned',
-    ip: input.ip.trim() || '0.0.0.0',
-    mac: input.mac.trim().toUpperCase() || '00:00:00:00:00:00',
+    ip: '0.0.0.0',
+    mac: '00:00:00:00:00:00',
     ssid: input.ssid.trim() || settings.defaultSsid,
     rssiDbm: null,
-    mqttTopic: input.mqttTopic.trim() || `station/${input.id.trim()}/telemetry`,
+    mqttTopic: `station/${input.id.trim()}/telemetry`,
     cpuTempC: null,
     freeHeapKb: null,
     flashMb: 4,
-    power: input.power,
-    batteryPct: input.power === 'battery' ? 100 : null,
-    sensors: splitList(input.sensors),
-    tags: splitList(input.tags),
-    notes: input.notes.trim() || 'Provisioned from Weather Admin.',
+    sensors: [],
+    tags: [],
+    notes: 'Provisioned from Weather Admin.',
+    publicKeySpkiB64: input.publicKeySpkiB64,
   }
 }
 
