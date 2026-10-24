@@ -24,7 +24,11 @@ export function TopBar() {
   const { pathname } = useLocation()
 
   return (
-    <AppBar position="sticky" elevation={0} sx={{ bgcolor: '#1a1a1a', color: '#fff' }}>
+    <AppBar
+      position="static"
+      elevation={0}
+      sx={{ bgcolor: '#1a1a1a', color: '#fff', flexShrink: 0 }}
+    >
       <Toolbar sx={{ position: 'relative', minHeight: { xs: 56, sm: 56 } }}>
         <Box sx={{ display: 'flex', alignItems: 'center', minWidth: 0, zIndex: 1 }}>
           <WbCloudyIcon sx={{ mr: 1.5 }} />
